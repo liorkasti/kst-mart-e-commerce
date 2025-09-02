@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "rn-kst-mart",
-    "slug": "rn-kst-mart",
+    "slug": "KST Mart",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
