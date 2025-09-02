@@ -1,50 +1,42 @@
-# Welcome to your Expo app 👋
+# KST Mart
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A demo React Native application built with **Expo**, listing products.
 
-## Get started
+## Features
+- Fetches product data from [dummyjson API](https://dummyjson.com/products?limit=100).
+- Categories overview screen:
+  - Unique categories with thumbnail, product count, and stock sum.
+- Category details screen:
+  - List of products with image, price, and stock.
 
-1. Install dependencies
+## TODOS
+- Category details screen:
+    - Add to cart functionality.
+    - Filter
+    - Sorting capability
+- **Redux Toolkit** extended feature  for cart state management: chore(infra): add navigation, react-query, redux-toolkit setup.
+- **React Query** for data fetching, caching, and offline persistence.
+- Error handling, loading states, and skeleton placeholders.
+- Accessibility-friendly components.
+- Light micro-animations for better UX.
+- **Testing** test: add unit tests for category aggregations and category card
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
+- [Expo](https://expo.dev/) (React Native, TypeScript)
+- [React Query](https://tanstack.com/query) – API data & caching
+- [Redux Toolkit](https://redux-toolkit.js.org/) – Cart management
+- [React Navigation](https://reactnavigation.org/) – Navigation
+- [Jest](https://jestjs.io/) – Basic unit tests
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+## Installation
 ```bash
-npm run reset-project
-```
+# clone repo
+git clone https://github.com/your-username/kst-cart-hacker.git
+cd cd rn-kst-mart 
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+# install dependencies
+yarn install
 
-## Learn more
+# start project
+yarn start
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
