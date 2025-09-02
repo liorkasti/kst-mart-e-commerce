@@ -1,5 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -18,6 +19,16 @@ import HeaderBanner from '@/components/HeaderBanner';
 import HeaderHero from '@/components/HeaderHero';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+// Local Product type used by this screen
+type Product = {
+  id: number;
+  title: string;
+  price: number;
+  category: string;
+  stock?: number;
+  thumbnail?: string;
+  images?: string[];
+};
 
 export default function HomeScreen() {
   const HORIZONTAL_PADDING = 16;
@@ -25,15 +36,6 @@ export default function HomeScreen() {
   const AnimatedFlatList = Animated.createAnimatedComponent(
     FlatList
   ) as unknown as typeof FlatList;
-  type Product = {
-    id: number;
-    title: string;
-    price: number;
-    stock: number;
-    category: string;
-    thumbnail?: string;
-    images?: string[];
-  };
 
   type CategorySummary = {
     name: string;
@@ -42,48 +44,36 @@ export default function HomeScreen() {
     totalStock: number;
   };
 
-  const [products, setProducts] = useState<Product[] | null>(null);
-  const [productsByCategory, setProductsByCategory] = useState<
-    Record<string, Product[]>
-  >({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<{ products: Product[] }, Error>({
+    queryKey: ['products-local'],
+    queryFn: async () => {
+      const payload = require('../../../shared/products.json') as {
+        products: Product[];
+      };
+      return payload;
+    },
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    (async function load() {
+  const products = data?.products ?? null;
+  const productsByCategory = useMemo(() => {
+    const map: Record<string, Product[]> = {};
+    if (!products) return map;
+    for (const p of products) {
+      if (!map[p.category]) map[p.category] = [];
+      map[p.category].push(p);
       try {
-        setError(null);
-        setLoading(true);
-        const res = await fetch('https://dummyjson.com/products?limit=100');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { products: Product[] };
-        if (mounted) {
-          const list = data.products ?? [];
-          setProducts(list);
-          // precompute by category for fast access
-          const map: Record<string, Product[]> = {};
-          for (const p of list) {
-            if (!map[p.category]) map[p.category] = [];
-            map[p.category].push(p);
-            // attempt to prefetch thumbnails (expo-image exposes prefetch via static prefetch)
-            try {
-              // @ts-ignore
-              Image.prefetch?.(p.thumbnail);
-            } catch {}
-          }
-          setProductsByCategory(map);
+        if (p.thumbnail && typeof (Image as any).prefetch === 'function') {
+          (Image as any).prefetch(p.thumbnail);
         }
-      } catch (e: any) {
-        if (mounted) setError(e?.message ?? 'Unknown error');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+      } catch {}
+    }
+    return map;
+  }, [products]);
 
   const categories: CategorySummary[] = useMemo(() => {
     if (!products) return [];
@@ -135,7 +125,6 @@ export default function HomeScreen() {
     return categories.filter((c) => categorizeName(c.name) === selectedGroup);
   }, [categories, selectedGroup]);
 
-  // memoized product row for FlatList in modal
   const ProductRow = React.useMemo(() => {
     const Row: React.FC<{ item: Product }> = ({ item }) => (
       <View
@@ -179,27 +168,14 @@ export default function HomeScreen() {
       {loading ? (
         <ActivityIndicator />
       ) : error ? (
-        <ThemedText type="defaultSemiBold">Error: {error}</ThemedText>
+        <ThemedText type="defaultSemiBold">Error: {error.message}</ThemedText>
       ) : (
         <ThemedText>No data</ThemedText>
       )}
     </View>
   );
 
-  const fetchProducts = async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const res = await fetch('https://dummyjson.com/products?limit=100');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { products: Product[] };
-      setProducts(data.products ?? []);
-    } catch (e: any) {
-      setError(e?.message ?? 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchProducts = refetch;
   const HeaderComponent = () => {
     const HEADER_HEIGHT = 180;
     const scale = scrollY.interpolate({
@@ -340,12 +316,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 24,
-  },
-  catEnvImageContainer: {
-    width: '100%',
-    height: 180,
-    marginTop: -headerPaddingTop,
-    marginBottom: 12,
   },
   gridListPadding: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 },
   groupButton: {

@@ -7,12 +7,15 @@ type Props = {
   animatedStyle?: object;
   horizontalPadding?: number;
   height?: number;
+  marginTop?: number;
 };
 
 export default function HeaderBanner({
   animatedStyle = {},
   horizontalPadding = 16,
+  marginTop = -8,
   height = 180,
+
 }: Props) {
   const imageWidth = SCREEN_WIDTH + horizontalPadding * 2;
   const imageStyle = [{ width: imageWidth, height }, animatedStyle] as any;
@@ -21,6 +24,7 @@ export default function HeaderBanner({
     <View
       style={{
         marginHorizontal: -horizontalPadding,
+        marginTop,
         overflow: 'hidden',
         height,
         alignItems: 'center',
