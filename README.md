@@ -1,40 +1,52 @@
 # KST - Products Mart Demo Project
 
-A demo React Native application built with **Expo**, listing products.
+A demo React Native application built with Expo, listing products and categories.
+
+## Project layout
+- `rn-kst-mart/` — Expo (React Native, TypeScript) app
+- `shared/` — Shared static data (e.g., `products.json`) used by the RN app
+- `next-kst-mart/`, `packages/` — Web and packages (not required to run RN app)
 
 ## Features
-- Fetches product data from [dummyjson API](https://dummyjson.com/products?limit=100).
-- Categories overview screen:
-  - Unique categories with thumbnail, product count, and stock sum.
-- Category details screen:
-  - List of products with image, price, and stock.
+- Categories overview built from a local JSON dataset (`shared/products.json`).
+- For each category: thumbnail, product count, and total stock.
+- Category details modal with product list, image, price, and stock.
+- Clean, typed components with Themed UI and small animations.
 
-## TODOS
-- Category details screen:
-    - Add to cart functionality.
-    - Filter
-    - Sorting capability
-- **Redux Toolkit** extended feature  for cart state management: chore(infra): add navigation, react-query, redux-toolkit setup.
-- **React Query** for data fetching, caching, and offline persistence.
-- Error handling, loading states, and skeleton placeholders.
-- Accessibility-friendly components.
-- Light micro-animations for better UX.
-- **Testing** test: add unit tests for category aggregations and category card
+## Requirements
+- Node 18+
+- Expo CLI (use the versioned local CLI via npx)
+- iOS Simulator or Android Emulator, or a physical device with Expo Go
 
-## Tech Stack
-- [Expo](https://expo.dev/) (React Native, TypeScript)
-- [React Navigation](https://reactnavigation.org/) – Navigation
-- [Jest](https://jestjs.io/) – Basic unit tests
-
-## Installation
+## Install & Run (React Native app)
 ```bash
 # clone repo
 git clone https://github.com/liorkasti/kst-mart-e-commerce.git
-cd rn-kst-mart
+cd kst-mart-e-commerce/rn-kst-mart
 
-# install dependencies
+# install dependencies (choose one)
+npm install
+# or
 yarn install
+# or
+bun install
 
-# start project
-yarn start
+# start dev server (use the versioned local CLI)
+npx expo start -c
+```
 
+## Scripts (quick reference)
+Run from `rn-kst-mart/`:
+```bash
+npx expo start -c        # start dev with cache clear
+npx expo run:ios         # iOS simulator (requires Xcode)
+npx expo run:android     # Android emulator (requires Android Studio)
+```
+
+## Roadmap / TODO
+- Cart: Add to cart and cart UI (Redux Toolkit slice in RN app)
+- Category details: filters and sorting
+- Error states and skeleton placeholders
+- Accessibility polish (roles, labels, focus order)
+- Micro-animations for transitions
+- Tests: category aggregation and CategoryCard
