@@ -12,13 +12,13 @@ type Props = {
   children?: React.ReactNode;
 };
 
-export default function HeaderHero({
+const HeaderHero=({
   title = 'Product Categories',
   animatedStyle,
   horizontalPadding = 16,
   height = 180,
   children,
-}: Props) {
+}: Props) =>{
   const headerPaddingTop =
     Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 44;
 
@@ -40,6 +40,8 @@ export default function HeaderHero({
     </>
   );
 }
+
+export default HeaderHero
 
 const styles = StyleSheet.create({
   titleContainer: {

@@ -1,21 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Dimensions, FlatList, StyleSheet, Text, View } from 'react-native';
+import { SkeletonList } from '@/components/skeleton/Skeleton';
 import CategoryItem from './CategoryItem';
+import { productsRepository } from '../../packages/core/src';
 
-type Product = {
-  id: number;
-  title: string;
-  category: string;
-  thumbnail?: string;
-  images?: string[];
-};
 type CategorySummary = { name: string; thumbnail?: string; count: number };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -26,43 +14,22 @@ const CategoriesList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const ac = new AbortController();
     let mounted = true;
-    (async function fetchProducts() {
+    (async () => {
       try {
-        const res = await fetch('https://dummyjson.com/products?limit=200');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const products: Product[] = data.products ?? [];
-        const byCat = new Map<string, { thumb?: string; count: number }>();
-        for (const p of products) {
-          const existing = byCat.get(p.category);
-          if (!existing) {
-            byCat.set(p.category, {
-              thumb: p.thumbnail || p.images?.[0],
-              count: 1,
-            });
-          } else {
-            existing.count += 1;
-          }
-        }
-        if (mounted) {
-          const arr: CategorySummary[] = Array.from(byCat.entries()).map(
-            ([name, v]) => ({
-              name,
-              thumbnail: v.thumb,
-              count: v.count,
-            })
-          );
-          setCategories(arr);
-        }
+        const list = await productsRepository.getCategories(ac.signal);
+        if (mounted) setCategories(list);
       } catch (e: any) {
-        if (mounted) setError(e.message ?? 'Failed to fetch');
+        if (!mounted) return;
+        setError(e?.message || 'Failed to load categories');
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => {
       mounted = false;
+      ac.abort();
     };
   }, []);
 
@@ -70,9 +37,8 @@ const CategoriesList: React.FC = () => {
 
   if (loading)
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-        <Text style={styles.hint}>Loading categories…</Text>
+      <View style={{ flex: 1 }}>
+        <SkeletonList rows={8} />
       </View>
     );
 

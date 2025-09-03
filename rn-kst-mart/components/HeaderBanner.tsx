@@ -11,13 +11,12 @@ type Props = {
   marginTop?: number;
 };
 
-export default function HeaderBanner({
+const HeaderBanner: React.FC<Props> = ({
   animatedStyle = {},
   horizontalPadding = 16,
   marginTop = -8,
   height = 180,
-
-}: Props) {
+}) => {
   const colorScheme = useColorScheme() ?? 'light';
   const imageWidth = SCREEN_WIDTH + horizontalPadding * 2;
   // Overscan the image to avoid revealing background on iOS bounce/scale
@@ -27,6 +26,13 @@ export default function HeaderBanner({
     { width: imageWidth, height: renderedHeight, position: 'absolute', top: -overscan, left: 0 },
     animatedStyle,
   ] as any;
+  const bgImageStyle = {
+    width: imageWidth,
+    height,
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+  };
 
   return (
     <View
@@ -42,9 +48,16 @@ export default function HeaderBanner({
     >
       <Animated.Image
         source={require('@/assets/images/cat-env.png')}
+        style={bgImageStyle as any}
+        resizeMode="cover"
+      />
+      <Animated.Image
+        source={require('@/assets/images/cat-env.png')}
         style={imageStyle}
         resizeMode="cover"
       />
     </View>
   );
-}
+};
+
+export default HeaderBanner;

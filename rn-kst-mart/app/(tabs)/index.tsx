@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   FlatList,
@@ -22,9 +21,9 @@ import { useParallaxHeader } from '@/hooks/useParallaxHeader';
 
 import CategoryCard from '@/components/CategoryCard';
 import HeaderBanner from '@/components/HeaderBanner';
-import HeaderHero from '@/components/HeaderHero';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { SkeletonCategoryGrid } from '@/components/skeleton/Skeleton';
 // Local Product type used by this screen
 type Product = {
   id: number;
@@ -57,10 +56,16 @@ export default function HomeScreen() {
     refetch,
   } = useQuery<{ products: Product[] }, Error>({
     queryKey: ['products-local'],
+
     queryFn: async () => {
       const payload = require('../../../shared/products.json') as {
         products: Product[];
       };
+      // remote api:
+      // const res = await fetch('https://dummyjson.com/products?limit=200', { signal });
+      // if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // const json = (await res.json()) as { products: Product[] };
+      // return json;
       return payload;
     },
   });
@@ -169,11 +174,11 @@ export default function HomeScreen() {
     </ThemedView>
   );
 
-  const renderEmpty = (
+  const renderEmpty = loading ? (
+    <SkeletonCategoryGrid />
+  ) : (
     <View style={styles.center}>
-      {loading ? (
-        <ActivityIndicator />
-      ) : error ? (
+      {error ? (
         <ThemedText type="defaultSemiBold">Error: {error.message}</ThemedText>
       ) : (
         <ThemedText>No data</ThemedText>
@@ -220,13 +225,19 @@ export default function HomeScreen() {
     });
     const opacity = progress;
 
+    const HEADER_HEIGHT = 140;
     const { animatedStyle: modalHeaderStyle, onScroll: onModalScroll } =
-      useParallaxHeader({ headerHeight: 140 });
+      useParallaxHeader({ headerHeight: HEADER_HEIGHT });
     const AnimatedFlatListInner = Animated.createAnimatedComponent(
       FlatList
     ) as unknown as typeof FlatList;
 
     const items = productsByCategory[selectedCategory ?? ''] ?? [];
+    const [stickyHeight, setStickyHeight] = useState(48);
+    const listData = useMemo<(string | Product)[]>(
+      () => ['__sticky__', ...items],
+      [items]
+    );
 
     return (
       <Modal
@@ -235,6 +246,7 @@ export default function HomeScreen() {
         onRequestClose={close}
         animationType="none"
         presentationStyle="overFullScreen"
+        statusBarTranslucent
       >
         <View style={styles.modalRoot}>
           <Animated.View
@@ -253,55 +265,76 @@ export default function HomeScreen() {
           >
             <View style={styles.modalInner}>
               <ThemedView style={{ flex: 1 }}>
-              <HeaderHero
-                title={selectedCategory ?? ''}
-                horizontalPadding={HORIZONTAL_PADDING}
-                height={140}
-                animatedStyle={modalHeaderStyle}
-              >
-                <View
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingBottom: 8,
-                    alignItems: 'flex-end',
-                  }}
-                >
-                  <TouchableOpacity
-                    accessibilityLabel="Close"
-                    onPress={close}
-                    style={{
-                      padding: 8,
-                      borderRadius: 20,
-                      backgroundColor:
-                        colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                    }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons
-                      name="close"
-                      size={22}
-                      color={colorScheme === 'dark' ? '#fff' : '#111'}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </HeaderHero>
-
               <AnimatedFlatListInner
-                data={items}
-                keyExtractor={(p) => String(p.id)}
+                data={listData}
+                keyExtractor={(it, idx) => (idx === 0 ? 'sticky' : String((it as Product).id))}
                 onScroll={onModalScroll}
                 scrollEventThrottle={16}
                 initialNumToRender={10}
                 removeClippedSubviews
                 windowSize={9}
-                getItemLayout={(_, index) => ({
-                  length: 88,
-                  offset: 88 * index,
-                  index,
-                })}
-                renderItem={({ item: p }) => <ProductRow item={p} />}
+                getItemLayout={(_, index) => {
+                  if (index === 0) return { length: stickyHeight, offset: 0, index };
+                  const length = 88;
+                  const offset = stickyHeight + length * (index - 1);
+                  return { length, offset, index };
+                }}
+                ListHeaderComponent={
+                  <HeaderBanner
+                    animatedStyle={modalHeaderStyle}
+                    horizontalPadding={HORIZONTAL_PADDING}
+                    height={HEADER_HEIGHT}
+                  />
+                }
+                stickyHeaderIndices={[1]}
+                renderItem={({ item, index }) =>
+                  index === 0 ? (
+                    <ThemedView
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                        backgroundColor: colorScheme === 'dark' ? '#0a0a0a' : '#fff',
+                        zIndex: 10,
+                        elevation: 3,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.08,
+                        shadowRadius: 6,
+                        shadowOffset: { width: 0, height: 2 },
+                      }}
+                      onLayout={(e) => setStickyHeight(Math.round(e.nativeEvent.layout.height))}
+                    >
+                      <ThemedText type="title">{selectedCategory ?? ''}</ThemedText>
+                      <TouchableOpacity
+                        accessibilityLabel="Close"
+                        onPress={close}
+                        style={{
+                          padding: 8,
+                          borderRadius: 20,
+                          backgroundColor:
+                            colorScheme === 'dark'
+                              ? 'rgba(255,255,255,0.08)'
+                              : 'rgba(0,0,0,0.06)',
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name="close"
+                          size={22}
+                          color={colorScheme === 'dark' ? '#fff' : '#111'}
+                        />
+                      </TouchableOpacity>
+                    </ThemedView>
+                  ) : (
+                    <ProductRow item={item as Product} />
+                  )
+                }
               />
-            </ThemedView>
+              </ThemedView>
             </View>
           </Animated.View>
         </View>
