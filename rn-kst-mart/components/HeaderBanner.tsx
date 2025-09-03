@@ -1,5 +1,6 @@
 import React from 'react';
 import { Animated, Dimensions, View } from 'react-native';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -17,8 +18,15 @@ export default function HeaderBanner({
   height = 180,
 
 }: Props) {
+  const colorScheme = useColorScheme() ?? 'light';
   const imageWidth = SCREEN_WIDTH + horizontalPadding * 2;
-  const imageStyle = [{ width: imageWidth, height }, animatedStyle] as any;
+  // Overscan the image to avoid revealing background on iOS bounce/scale
+  const overscan = Math.max(24, Math.round(height * 0.25));
+  const renderedHeight = height + overscan * 2;
+  const imageStyle = [
+    { width: imageWidth, height: renderedHeight, position: 'absolute', top: -overscan, left: 0 },
+    animatedStyle,
+  ] as any;
 
   return (
     <View
@@ -28,6 +36,8 @@ export default function HeaderBanner({
         overflow: 'hidden',
         height,
         alignItems: 'center',
+        position: 'relative',
+        backgroundColor: colorScheme === 'dark' ? '#111' : '#eee',
       }}
     >
       <Animated.Image

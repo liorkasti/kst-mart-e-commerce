@@ -20,8 +20,6 @@ type CategorySummary = { name: string; thumbnail?: string; count: number };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// CategoryItem and CategoryBadge moved to their own atomic components
-
 const CategoriesList: React.FC = () => {
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);

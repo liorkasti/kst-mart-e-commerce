@@ -1,18 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   FlatList,
   Modal,
+  Pressable,
   Platform,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useParallaxHeader } from '@/hooks/useParallaxHeader';
 
 import CategoryCard from '@/components/CategoryCard';
 import HeaderBanner from '@/components/HeaderBanner';
@@ -32,7 +38,7 @@ type Product = {
 
 export default function HomeScreen() {
   const HORIZONTAL_PADDING = 16;
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const { animatedStyle, onScroll } = useParallaxHeader({ headerHeight: 240 });
   const AnimatedFlatList = Animated.createAnimatedComponent(
     FlatList
   ) as unknown as typeof FlatList;
@@ -176,23 +182,134 @@ export default function HomeScreen() {
   );
 
   const fetchProducts = refetch;
-  const HeaderComponent = () => {
-    const HEADER_HEIGHT = 180;
-    const scale = scrollY.interpolate({
-      inputRange: [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
-      outputRange: [2, 1, 0.95],
-      extrapolate: 'clamp',
-    });
-    const translateY = scrollY.interpolate({
-      inputRange: [0, HEADER_HEIGHT],
-      outputRange: [0, -HEADER_HEIGHT * 0.25],
-      extrapolate: 'clamp',
-    });
-
-    const animatedStyle = {
-      transform: [{ translateY }, { scale }],
+  
+  const CategoryModal: React.FC = () => {
+    const colorScheme = useColorScheme() ?? 'light';
+    const progress = useRef(new Animated.Value(0)).current;
+    const close = () => {
+      Animated.timing(progress, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => setSelectedCategory(null));
     };
+    useEffect(() => {
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }, [progress]);
 
+    const overlayOpacity = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.8],
+      extrapolate: 'clamp',
+    });
+    const translateY = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [40, 0],
+      extrapolate: 'clamp',
+    });
+    const scale = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.98, 1],
+      extrapolate: 'clamp',
+    });
+    const opacity = progress;
+
+    const { animatedStyle: modalHeaderStyle, onScroll: onModalScroll } =
+      useParallaxHeader({ headerHeight: 140 });
+    const AnimatedFlatListInner = Animated.createAnimatedComponent(
+      FlatList
+    ) as unknown as typeof FlatList;
+
+    const items = productsByCategory[selectedCategory ?? ''] ?? [];
+
+    return (
+      <Modal
+        transparent
+        visible
+        onRequestClose={close}
+        animationType="none"
+        presentationStyle="overFullScreen"
+      >
+        <View style={styles.modalRoot}>
+          <Animated.View
+            style={[styles.backdrop, { opacity: overlayOpacity }]}
+          />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={close}
+            android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
+          />
+          <Animated.View
+            style={[
+              styles.modalCard,
+              { transform: [{ translateY }, { scale }], opacity },
+            ]}
+          >
+            <View style={styles.modalInner}>
+              <ThemedView style={{ flex: 1 }}>
+              <HeaderHero
+                title={selectedCategory ?? ''}
+                horizontalPadding={HORIZONTAL_PADDING}
+                height={140}
+                animatedStyle={modalHeaderStyle}
+              >
+                <View
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingBottom: 8,
+                    alignItems: 'flex-end',
+                  }}
+                >
+                  <TouchableOpacity
+                    accessibilityLabel="Close"
+                    onPress={close}
+                    style={{
+                      padding: 8,
+                      borderRadius: 20,
+                      backgroundColor:
+                        colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={22}
+                      color={colorScheme === 'dark' ? '#fff' : '#111'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </HeaderHero>
+
+              <AnimatedFlatListInner
+                data={items}
+                keyExtractor={(p) => String(p.id)}
+                onScroll={onModalScroll}
+                scrollEventThrottle={16}
+                initialNumToRender={10}
+                removeClippedSubviews
+                windowSize={9}
+                getItemLayout={(_, index) => ({
+                  length: 88,
+                  offset: 88 * index,
+                  index,
+                })}
+                renderItem={({ item: p }) => <ProductRow item={p} />}
+              />
+            </ThemedView>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  };
+  const HeaderComponent = () => {
+    const HEADER_HEIGHT = 240;
     return (
       <>
         <HeaderBanner
@@ -202,14 +319,14 @@ export default function HomeScreen() {
         />
         {renderHeader}
         <View style={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 8 }}>
-          <FlatList
-            data={GROUPS}
+          <ScrollView
             horizontal
-            keyExtractor={(g) => g}
             showsHorizontalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
-            renderItem={({ item: g }) => (
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {GROUPS.map((g) => (
               <TouchableOpacity
+                key={g}
                 onPress={() => setSelectedGroup(g)}
                 style={[
                   styles.groupButton,
@@ -222,8 +339,8 @@ export default function HomeScreen() {
                   {g}
                 </ThemedText>
               </TouchableOpacity>
-            )}
-          />
+            ))}
+          </ScrollView>
         </View>
       </>
     );
@@ -232,10 +349,7 @@ export default function HomeScreen() {
   return (
     <>
       <AnimatedFlatList<CategorySummary>
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={onScroll}
         scrollEventThrottle={16}
         data={visibleCategories}
         keyExtractor={(item: CategorySummary) => item.name}
@@ -243,6 +357,9 @@ export default function HomeScreen() {
         columnWrapperStyle={{ justifyContent: 'space-between' }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={styles.gridListPadding}
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={fetchProducts} />
@@ -261,41 +378,7 @@ export default function HomeScreen() {
       />
 
       {/* Modal showing products in the selected category */}
-      {selectedCategory && (
-        <Modal
-          visible={true}
-          animationType="slide"
-          onRequestClose={() => setSelectedCategory(null)}
-        >
-          <ThemedView style={{ flex: 1 }}>
-            <HeaderHero
-              title={selectedCategory ?? ''}
-              horizontalPadding={HORIZONTAL_PADDING}
-              height={140}
-            >
-              <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-                <TouchableOpacity onPress={() => setSelectedCategory(null)}>
-                  <ThemedText type="defaultSemiBold">Close</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </HeaderHero>
-
-            <FlatList
-              data={productsByCategory[selectedCategory ?? ''] ?? []}
-              keyExtractor={(p) => String(p.id)}
-              initialNumToRender={8}
-              removeClippedSubviews
-              windowSize={7}
-              getItemLayout={(_, index) => ({
-                length: 88,
-                offset: 88 * index,
-                index,
-              })}
-              renderItem={({ item: p }) => <ProductRow item={p} />}
-            />
-          </ThemedView>
-        </Modal>
-      )}
+      {selectedCategory && <CategoryModal />}
     </>
   );
 }
@@ -325,4 +408,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.03)',
   },
   groupButtonActive: { backgroundColor: 'rgba(0,0,0,0.08)' },
+  modalRoot: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  modalCard: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  modalInner: {
+    flex: 1,
+    marginHorizontal: 12,
+    marginTop: 60,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    // subtle shadow for card separation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
 });
