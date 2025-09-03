@@ -72,61 +72,30 @@ export default function HomeScreen() {
 
   const products = data?.products ?? null;
   const productsByCategory = useMemo(() => {
-    const map: Record<string, Product[]> = {};
-    if (!products) return map;
-    for (const p of products) {
-      if (!map[p.category]) map[p.category] = [];
-      map[p.category].push(p);
-      try {
-        if (p.thumbnail && typeof (Image as any).prefetch === 'function') {
-          (Image as any).prefetch(p.thumbnail);
-        }
-      } catch {}
+    if (!products) return {} as Record<string, Product[]>;
+    const { buildProductsByCategory } = require('@/utils/category') as typeof import('@/utils/category');
+    const map = buildProductsByCategory(products);
+    // prefetch thumbnails
+    for (const arr of Object.values(map)) {
+      for (const p of arr) {
+        try {
+          if (p.thumbnail && typeof (Image as any).prefetch === 'function') {
+            (Image as any).prefetch(p.thumbnail);
+          }
+        } catch {}
+      }
     }
     return map;
   }, [products]);
 
   const categories: CategorySummary[] = useMemo(() => {
     if (!products) return [];
-    const byCategory = new Map<
-      string,
-      { firstThumb?: string; count: number; stock: number }
-    >();
-    for (const p of products) {
-      const existing = byCategory.get(p.category);
-      if (!existing) {
-        byCategory.set(p.category, {
-          firstThumb: p.thumbnail || p.images?.[0],
-          count: 1,
-          stock: p.stock ?? 0,
-        });
-      } else {
-        existing.count += 1;
-        existing.stock += p.stock ?? 0;
-      }
-    }
-    return Array.from(byCategory.entries()).map(([name, v]) => ({
-      name,
-      thumbnail: v.firstThumb,
-      productsCount: v.count,
-      totalStock: v.stock,
-    }));
+    const { buildCategorySummaries } = require('@/utils/category') as typeof import('@/utils/category');
+    return buildCategorySummaries(products);
   }, [products]);
 
   const GROUPS = ['All', 'Electronics', 'Home', 'Clothing', 'Food', 'Other'];
-  const categorizeName = (cat: string) => {
-    const c = cat.toLowerCase();
-    if (c.includes('elect')) return 'Electronics';
-    if (c.includes('phone') || c.includes('laptop') || c.includes('computer'))
-      return 'Electronics';
-    if (c.includes('home') || c.includes('kitchen') || c.includes('furn'))
-      return 'Home';
-    if (c.includes('clothing') || c.includes('shirt') || c.includes('jeans'))
-      return 'Clothing';
-    if (c.includes('food') || c.includes('snack') || c.includes('drink'))
-      return 'Food';
-    return 'Other';
-  };
+  const { categorizeName } = require('@/utils/category') as typeof import('@/utils/category');
 
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
